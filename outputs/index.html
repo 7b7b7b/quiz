@@ -1,0 +1,1157 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>生活数字直觉测验</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: #111a2f;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --good: #22c55e;
+        --warn: #f59e0b;
+        --bad: #ef4444;
+        --border: #1f2a44;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "PingFang SC", "Noto Sans SC", system-ui, -apple-system, Segoe UI, sans-serif;
+        color: var(--text);
+        background: radial-gradient(circle at 10% 10%, #1e293b 0%, var(--bg) 38%, #020617 100%);
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      main {
+        width: min(860px, 100%);
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.75));
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
+      }
+      h1, h2, h3, p {
+        margin: 0;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.14);
+        color: var(--accent);
+        font-size: 12px;
+      }
+      .qbox {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+      }
+      .meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+        font-size: 14px;
+        color: var(--muted);
+        flex-wrap: wrap;
+      }
+      .meta span {
+        white-space: nowrap;
+      }
+      #questionText {
+        font-size: 1.35rem;
+        line-height: 1.45;
+      }
+      .hint {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .inputRow {
+        margin-top: 16px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .sliderWrap {
+        margin-top: 14px;
+        display: grid;
+        gap: 10px;
+      }
+      #guessSlider {
+        width: 100%;
+      }
+      .guessVal {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: #020617;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 15px;
+      }
+      .unit {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      button {
+        margin-top: 14px;
+        width: 100%;
+        border: 0;
+        border-radius: 12px;
+        padding: 12px;
+        background: linear-gradient(120deg, #0ea5e9, #6366f1);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .feedback {
+        margin-top: 14px;
+        font-size: 15px;
+        min-height: 58px;
+      }
+      .scoreText {
+        font-weight: 700;
+        font-size: 20px;
+      }
+      .barRow {
+        margin-top: 8px;
+        width: 100%;
+        height: 10px;
+        border-radius: 99px;
+        background: #0b1221;
+        overflow: hidden;
+      }
+      .bar {
+        height: 100%;
+        border-radius: 99px;
+      }
+      .good { color: var(--good); }
+      .warn { color: var(--warn); }
+      .bad { color: var(--bad); }
+      .summary {
+        margin-top: 18px;
+        display: grid;
+        gap: 12px;
+      }
+      .category {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: #0b1221;
+      }
+      .category-top {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+      .small {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .result-title {
+        margin-top: 20px;
+      }
+      .result-sub {
+        margin-top: 8px;
+      }
+      footer {
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .correct {
+        font-size: 14px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .row .pill {
+        background: rgba(34, 197, 94, 0.14);
+        color: var(--good);
+      }
+      .result-wrap {
+        display: none;
+      }
+      .result-wrap.show {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="top">
+        <h1>生活数字直觉测验（MVP）</h1>
+        <span class="pill">不算题，猜个量级</span>
+      </div>
+      <p class="muted">规则：只要猜接近数量级就行。支持凭感觉，不必精确；按量级打分。</p>
+
+      <section id="quiz" class="qbox">
+        <div class="meta">
+          <span id="progress">第 1 / 10 题</span>
+          <span id="category" class="pill">生物</span>
+          <span id="liveScore" class="muted">当前得分：0</span>
+        </div>
+
+        <h2 id="questionText">题目加载中…</h2>
+        <p id="hint" class="hint"></p>
+
+        <div class="inputRow">
+          <span id="unit" class="unit"></span>
+        </div>
+
+        <div class="sliderWrap">
+          <input id="guessSlider" type="range" />
+          <div class="guessVal">
+            <span id="guessLabel"></span>
+            <span id="scaleHint" class="muted"></span>
+          </div>
+        </div>
+
+        <button id="actionBtn">提交</button>
+        <p id="feedback" class="feedback"></p>
+      </section>
+
+      <section id="result" class="result-wrap">
+        <h2 class="result-title">测验结果</h2>
+        <p id="resultIntro" class="result-sub muted"></p>
+
+        <div class="summary" id="categorySummary"></div>
+        <p id="biasText" class="result-sub"></p>
+
+        <p class="result-sub muted">你的每题明细（可用于回看）：</p>
+        <div id="details" class="summary"></div>
+
+        <button id="restartBtn">再玩一次</button>
+      </section>
+
+      <footer>
+        提示：问题可因地域和时间略有差异，这版是 MVP 版本，目标是玩法通顺和可上线。
+      </footer>
+    </main>
+
+    <script>
+      const questions = [
+        {
+          category: '生物',
+          prompt: '一个成年人的日均热量需求大约多少？',
+          correct: 2200,
+          unit: 'kcal/天',
+          scaleMin: 1000,
+          scaleMax: 8000,
+          targetMin: 1500,
+          targetMax: 3000,
+          rangeHint: '体型、年龄与运动量差异会让范围有浮动'
+        },
+        {
+          category: '生物',
+          prompt: '人体大约有多少“万亿”个细胞？',
+          correct: 37,
+          unit: '万亿个细胞',
+          scaleMin: 5,
+          scaleMax: 150,
+          targetMin: 24,
+          targetMax: 55,
+          rangeHint: '通常在 10^13~10^14 这个量级'
+        },
+        {
+          category: '生物',
+          prompt: '成人静息心率通常在多少？',
+          correct: 70,
+          unit: '次/分钟',
+          scaleMin: 40,
+          scaleMax: 180,
+          targetMin: 55,
+          targetMax: 95,
+          scoreSlope: 260,
+          rangeHint: '运动、咖啡因会显著抬高'
+        },
+        {
+          category: '生物',
+          prompt: '健康成年人平均血液总量大约多少？',
+          correct: 5,
+          unit: 'L',
+          scaleMin: 3,
+          scaleMax: 8,
+          targetMin: 4.5,
+          targetMax: 6.2,
+          scoreSlope: 280,
+          rangeHint: '按性别和体型有差异'
+        },
+        {
+          category: '生物',
+          prompt: '成年人每分钟大概会呼吸多少次？',
+          correct: 18,
+          unit: '次/分钟',
+          scaleMin: 8,
+          scaleMax: 40,
+          targetMin: 12,
+          targetMax: 22,
+          rangeHint: '从每分钟换算到日均，可对应成人安静状态'
+        },
+        {
+          category: '生物',
+          prompt: '正常体温大约多少？',
+          correct: 36.5,
+          unit: '℃',
+          scaleMin: 33,
+          scaleMax: 42,
+          targetMin: 36,
+          targetMax: 37.8,
+          rangeHint: '看测量口径时会有小偏差'
+        },
+        {
+          category: '生物',
+          prompt: '成年人骨骼大约有多少块？',
+          correct: 206,
+          unit: '块',
+          scaleMin: 150,
+          scaleMax: 300,
+          targetMin: 198,
+          targetMax: 214,
+          scoreSlope: 260,
+          rangeHint: '新生儿和退化统计口径不完全一致'
+        },
+        {
+          category: '生物',
+          prompt: '人体内最常见的血糖测量单位 mg/dL 的正常空腹范围大约是？',
+          correct: 90,
+          unit: 'mg/dL',
+          scaleMin: 40,
+          scaleMax: 220,
+          targetMin: 70,
+          targetMax: 110,
+          scoreSlope: 240,
+          rangeHint: '口径可按常规健康成年人估'
+        },
+        {
+          category: '生物',
+          prompt: '成年人平均身高大约多少？',
+          correct: 171,
+          unit: 'cm',
+          scaleMin: 140,
+          scaleMax: 220,
+          targetMin: 165,
+          targetMax: 178,
+          rangeHint: '不同地区和年龄段会变化'
+        },
+        {
+          category: '生物',
+          prompt: '普通成年人每天消耗总热量换算到米/年会“走”多少步？',
+          correct: 6000,
+          unit: '步/天',
+          scaleMin: 1000,
+          scaleMax: 20000,
+          targetMin: 4500,
+          targetMax: 8000,
+          rangeHint: '不依赖运动器材，给个日常量级'
+        },
+        {
+          category: '生物',
+          prompt: '人体每秒大概会消耗多少克葡萄糖用于能量代谢？',
+          correct: 1,
+          unit: '克/秒',
+          scaleMin: 0.2,
+          scaleMax: 5,
+          targetMin: 0.6,
+          targetMax: 1.6,
+          rangeHint: '粗略估算，按常规体重人群'
+        },
+        {
+          category: '物理',
+          prompt: '地球表面的重力加速度大约是多少？',
+          correct: 9.8,
+          unit: 'm/s²',
+          scaleMin: 3,
+          scaleMax: 20,
+          targetMin: 9.2,
+          targetMax: 10.5,
+          rangeHint: '常见口径取 9.81'
+        },
+        {
+          category: '物理',
+          prompt: '真空中的光速约为多少？',
+          correct: 300000000,
+          unit: 'm/s',
+          scaleMin: 150000000,
+          scaleMax: 450000000,
+          targetMin: 280000000,
+          targetMax: 320000000,
+          rangeHint: '可写成 3.0×10^8'
+        },
+        {
+          category: '物理',
+          prompt: '标准大气压约为多少？',
+          correct: 101325,
+          unit: 'Pa',
+          scaleMin: 30000,
+          scaleMax: 300000,
+          targetMin: 98000,
+          targetMax: 105000,
+          rangeHint: '可用千帕单位理解也可'
+        },
+        {
+          category: '物理',
+          prompt: '常温下空气中的声速大约多少？',
+          correct: 343,
+          unit: 'm/s',
+          scaleMin: 180,
+          scaleMax: 1200,
+          targetMin: 320,
+          targetMax: 360,
+          rangeHint: '温度越高声音传播越快'
+        },
+        {
+          category: '物理',
+          prompt: '地球到太阳的平均距离大约多少？',
+          correct: 150000000,
+          unit: 'km',
+          scaleMin: 30000000,
+          scaleMax: 3000000000,
+          targetMin: 120000000,
+          targetMax: 160000000,
+          rangeHint: '也叫 1 AU 的量级'
+        },
+        {
+          category: '物理',
+          prompt: '地球半径大约多少？',
+          correct: 6371000,
+          unit: 'm',
+          scaleMin: 1000000,
+          scaleMax: 25000000,
+          targetMin: 6000000,
+          targetMax: 6700000,
+          rangeHint: '常识口径大约 6.37×10^6 m'
+        },
+        {
+          category: '物理',
+          prompt: '地球质量约为多少？',
+          correct: 6e24,
+          unit: 'kg',
+          scaleMin: 1e24,
+          scaleMax: 2e25,
+          targetMin: 4.8e24,
+          targetMax: 8.2e24,
+          rangeHint: '天体尺度以“10^24 kg”计更容易判断'
+        },
+        {
+          category: '物理',
+          prompt: '水在标准条件下的沸点是多少？',
+          correct: 100,
+          unit: '℃',
+          scaleMin: 70,
+          scaleMax: 150,
+          targetMin: 97,
+          targetMax: 103,
+          rangeHint: '海平面常压条件'
+        },
+        {
+          category: '天文',
+          prompt: '太阳半径大约多少？',
+          correct: 696000,
+          unit: 'km',
+          scaleMin: 150000,
+          scaleMax: 2000000,
+          targetMin: 650000,
+          targetMax: 740000,
+          rangeHint: '量级在 7e5 km 左右'
+        },
+        {
+          category: '天文',
+          prompt: '太阳表面温度大约多少？',
+          correct: 5778,
+          unit: 'K',
+          scaleMin: 3000,
+          scaleMax: 9000,
+          targetMin: 5400,
+          targetMax: 6100,
+          rangeHint: '常用 5500~6000K'
+        },
+        {
+          category: '天文',
+          prompt: '月球到地球平均距离大约多少？',
+          correct: 384000,
+          unit: 'km',
+          scaleMin: 300000,
+          scaleMax: 450000,
+          targetMin: 330000,
+          targetMax: 410000,
+          rangeHint: '量级是 3.8×10^5 km'
+        },
+        {
+          category: '天文',
+          prompt: '月球绕地球一周大约多久？',
+          correct: 27.3,
+          unit: '天',
+          scaleMin: 10,
+          scaleMax: 60,
+          targetMin: 26.5,
+          targetMax: 28,
+          scoreSlope: 360,
+          rangeHint: '按朔望月这个量级判断'
+        },
+        {
+          category: '天文',
+          prompt: '一年有多少秒？',
+          correct: 31536000,
+          unit: '秒',
+          scaleMin: 20000000,
+          scaleMax: 50000000,
+          targetMin: 31400000,
+          targetMax: 31600000,
+          rangeHint: '365 天口径'
+        },
+        {
+          category: '天文',
+          prompt: '宇宙年龄大约多少？',
+          correct: 1.38e10,
+          unit: '年',
+          scaleMin: 1e9,
+          scaleMax: 1e11,
+          targetMin: 1.2e10,
+          targetMax: 1.8e10,
+          rangeHint: '按十亿年到万亿年前后'
+        },
+        {
+          category: '天文',
+          prompt: '一天文单位（AU）对应距离大约多少公里？',
+          correct: 149600000,
+          unit: 'km',
+          scaleMin: 30000000,
+          scaleMax: 300000000,
+          targetMin: 145000000,
+          targetMax: 151000000,
+          rangeHint: '地-日距离的常用单位'
+        },
+        {
+          category: '天文',
+          prompt: '一个光年大约多少公里？',
+          correct: 9.46e12,
+          unit: 'km',
+          scaleMin: 1e12,
+          scaleMax: 3e13,
+          targetMin: 8.8e12,
+          targetMax: 1.02e13,
+          rangeHint: '跨星际最常见的距离单位之一'
+        },
+        {
+          category: '机器',
+          prompt: '家用空调典型额定功率大约多少？',
+          correct: 1200,
+          unit: 'W',
+          scaleMin: 300,
+          scaleMax: 3500,
+          targetMin: 800,
+          targetMax: 2200,
+          rangeHint: '看机型与制冷匹配功率'
+        },
+        {
+          category: '机器',
+          prompt: '家用电饭煲常见加热功率大约多少？',
+          correct: 700,
+          unit: 'W',
+          scaleMin: 250,
+          scaleMax: 1500,
+          targetMin: 450,
+          targetMax: 900,
+          rangeHint: '小容量与大容量差别明显'
+        },
+        {
+          category: '机器',
+          prompt: '家用洗衣机典型功率大约多少？',
+          correct: 500,
+          unit: 'W',
+          scaleMin: 150,
+          scaleMax: 1800,
+          targetMin: 300,
+          targetMax: 900,
+          rangeHint: '洗涤与脱水阶段不同'
+        },
+        {
+          category: '机器',
+          prompt: '普通家用微波炉常见功率大约多少？',
+          correct: 1000,
+          unit: 'W',
+          scaleMin: 400,
+          scaleMax: 1800,
+          targetMin: 800,
+          targetMax: 1200,
+          rangeHint: '高功率会更快但也更耗电'
+        },
+        {
+          category: '机器',
+          prompt: '常见家用台式风扇常见功率大约多少？',
+          correct: 70,
+          unit: 'W',
+          scaleMin: 20,
+          scaleMax: 300,
+          targetMin: 45,
+          targetMax: 120,
+          rangeHint: '风量与档位会改变'
+        },
+        {
+          category: '机器',
+          prompt: '普通小汽车 0 到 100km/h 通常需要多久？',
+          correct: 9,
+          unit: '秒',
+          scaleMin: 4,
+          scaleMax: 35,
+          targetMin: 6,
+          targetMax: 12,
+          rangeHint: '看日常乘用车的普遍区间'
+        },
+        {
+          category: '机器',
+          prompt: '普通家用电脑电源（整机）峰值功率常见在哪个档位？',
+          correct: 450,
+          unit: 'W',
+          scaleMin: 150,
+          scaleMax: 1500,
+          targetMin: 300,
+          targetMax: 700,
+          rangeHint: '轻办公/游戏场景差别不小'
+        },
+        {
+          category: '机器',
+          prompt: '一台电动自行车标称续航常见多久？',
+          correct: 60,
+          unit: 'km',
+          scaleMin: 20,
+          scaleMax: 200,
+          targetMin: 40,
+          targetMax: 100,
+          rangeHint: '看功率和电池容量'
+        },
+        {
+          category: '计算机',
+          prompt: '一台普通笔记本 CPU 主频大约多少？',
+          correct: 3,
+          unit: 'GHz',
+          scaleMin: 1,
+          scaleMax: 6,
+          targetMin: 2.1,
+          targetMax: 4.2,
+          rangeHint: '常规办公会在 2~4GHz'
+        },
+        {
+          category: '计算机',
+          prompt: '个人电脑常见内存容量大约多少？',
+          correct: 16,
+          unit: 'GB',
+          scaleMin: 4,
+          scaleMax: 64,
+          targetMin: 8,
+          targetMax: 32,
+          rangeHint: '按日常办公到轻度创作用'
+        },
+        {
+          category: '计算机',
+          prompt: '家庭常见宽带下载速率常见级别是多少？',
+          correct: 100,
+          unit: 'Mbps',
+          scaleMin: 20,
+          scaleMax: 5000,
+          targetMin: 50,
+          targetMax: 800,
+          rangeHint: '你先抓常见消费级口径'
+        },
+        {
+          category: '计算机',
+          prompt: '主流 SSD 的顺序读速率大约多少？',
+          correct: 3000,
+          unit: 'MB/s',
+          scaleMin: 300,
+          scaleMax: 7000,
+          targetMin: 1500,
+          targetMax: 5000,
+          rangeHint: '取顺序读写常见档位'
+        },
+        {
+          category: '计算机',
+          prompt: '常见智能手机存储容量大约多少？',
+          correct: 256,
+          unit: 'GB',
+          scaleMin: 32,
+          scaleMax: 2048,
+          targetMin: 128,
+          targetMax: 512,
+          rangeHint: '按中高端日用机型估算'
+        },
+        {
+          category: '计算机',
+          prompt: '1Gbps 网络接口的名义值大约是多少？',
+          correct: 1,
+          unit: 'Gbps',
+          scaleMin: 0.1,
+          scaleMax: 20,
+          targetMin: 0.8,
+          targetMax: 1.2,
+          rangeHint: '注意区分“标称值”和“实测值”'
+        },
+        {
+          category: '计算机',
+          prompt: '普通开发/办公桌面电脑常见 CPU 核心数大约多少？',
+          correct: 8,
+          unit: '核心',
+          scaleMin: 1,
+          scaleMax: 96,
+          targetMin: 4,
+          targetMax: 16,
+          rangeHint: '按普通办公/开发环境估'
+        },
+        {
+          category: '经济',
+          prompt: '中东原油每吨参考价格大约多少？',
+          correct: 620,
+          unit: '美元/吨',
+          scaleMin: 300,
+          scaleMax: 1200,
+          targetMin: 430,
+          targetMax: 760,
+          rangeHint: '不同品级和交割口径差异很大'
+        },
+        {
+          category: '经济',
+          prompt: '深圳市场上，10GB 手机流量日均套餐大概多少钱？',
+          correct: 18,
+          unit: '人民币',
+          scaleMin: 2,
+          scaleMax: 150,
+          targetMin: 10,
+          targetMax: 35,
+          rangeHint: '按常见商用套餐口径给区间'
+        },
+        {
+          category: '经济',
+          prompt: '2026年前后深圳市场，1公斤茄子大约多少钱？',
+          correct: 6,
+          unit: '人民币/公斤',
+          scaleMin: 2,
+          scaleMax: 40,
+          targetMin: 3.5,
+          targetMax: 11,
+          rangeHint: '地区、供应和季节波动都不少'
+        },
+        {
+          category: '经济',
+          prompt: '一公斤柴油零售价大约多少？',
+          correct: 11,
+          unit: '人民币',
+          scaleMin: 4,
+          scaleMax: 30,
+          targetMin: 8,
+          targetMax: 16,
+          rangeHint: '城市和油品质量分级会影响'
+        },
+        {
+          category: '经济',
+          prompt: '国内一升 92# 汽油常见零售价大致多少？',
+          correct: 7.8,
+          unit: '人民币/升',
+          scaleMin: 4,
+          scaleMax: 20,
+          targetMin: 6.5,
+          targetMax: 9.8,
+          rangeHint: '政策、地区和时间都会变化'
+        },
+        {
+          category: '经济',
+          prompt: '一杯中档咖啡在一线城市通常卖多少？',
+          correct: 35,
+          unit: '人民币',
+          scaleMin: 10,
+          scaleMax: 220,
+          targetMin: 20,
+          targetMax: 55,
+          rangeHint: '店型和品牌差别很大'
+        },
+        {
+          category: '经济',
+          prompt: '一张普通电影票在城市影院通常多少钱？',
+          correct: 55,
+          unit: '人民币',
+          scaleMin: 20,
+          scaleMax: 220,
+          targetMin: 35,
+          targetMax: 90,
+          rangeHint: '周末和首映场会明显变动'
+        },
+        {
+          category: '经济',
+          prompt: '地铁单次短途票常见价格是多少？',
+          correct: 3,
+          unit: '人民币/次',
+          scaleMin: 1,
+          scaleMax: 30,
+          targetMin: 2,
+          targetMax: 7,
+          rangeHint: '不同城市价格结构不同'
+        },
+        {
+          category: '地理',
+          prompt: '地球陆地面积大约多少？',
+          correct: 148940000,
+          unit: 'km²',
+          scaleMin: 50000000,
+          scaleMax: 300000000,
+          targetMin: 135000000,
+          targetMax: 155000000,
+          rangeHint: '比海洋面积少很多'
+        },
+        {
+          category: '地理',
+          prompt: '地球海洋面积大约多少？',
+          correct: 361000000,
+          unit: 'km²',
+          scaleMin: 200000000,
+          scaleMax: 500000000,
+          targetMin: 340000000,
+          targetMax: 390000000,
+          rangeHint: '通常占地球表面积的绝大部分'
+        },
+        {
+          category: '地理',
+          prompt: '中国陆地面积大约多少？',
+          correct: 9600000,
+          unit: 'km²',
+          scaleMin: 2000000,
+          scaleMax: 25000000,
+          targetMin: 9400000,
+          targetMax: 9800000,
+          rangeHint: '按国家陆地+内陆水域口径'
+        },
+        {
+          category: '地理',
+          prompt: '世界人口大约多少？',
+          correct: 7800000000,
+          unit: '人',
+          scaleMin: 3000000000,
+          scaleMax: 20000000000,
+          targetMin: 7400000000,
+          targetMax: 8300000000,
+          rangeHint: '按近期统计口径在 80 亿左右'
+        },
+        {
+          category: '地理',
+          prompt: '长江长度大约多少？',
+          correct: 6300,
+          unit: 'km',
+          scaleMin: 3000,
+          scaleMax: 12000,
+          targetMin: 5900,
+          targetMax: 6600,
+          rangeHint: '按主干道长度口径'
+        },
+        {
+          category: '地理',
+          prompt: '珠穆朗玛峰海拔大约多少？',
+          correct: 8848,
+          unit: 'm',
+          scaleMin: 7000,
+          scaleMax: 10000,
+          targetMin: 8700,
+          targetMax: 9000,
+          rangeHint: '世界最高峰在 8.8km 量级'
+        },
+        {
+          category: '地理',
+          prompt: '北京到上海直线距离大约多少？',
+          correct: 1060,
+          unit: 'km',
+          scaleMin: 300,
+          scaleMax: 3000,
+          targetMin: 990,
+          targetMax: 1120,
+          rangeHint: '看城市对城市距离，不一定是铁路里程'
+        },
+        {
+          category: '地理',
+          prompt: '世界上最大的沙漠（撒哈拉）面积大约多少？',
+          correct: 9200000,
+          unit: 'km²',
+          scaleMin: 3000000,
+          scaleMax: 20000000,
+          targetMin: 8500000,
+          targetMax: 10000000,
+          rangeHint: '量级是“上千万平方公里”'
+        }
+      ];
+
+      const state = {
+        index: 0,
+        items: shuffle([...questions]),
+        answers: [],
+        totalScore: 0,
+        totalCount: 0,
+        waitingNext: false,
+        categoryStats: {}
+      };
+
+      const qText = document.getElementById('questionText');
+      const qHint = document.getElementById('hint');
+      const qUnit = document.getElementById('unit');
+      const qCat = document.getElementById('category');
+      const qProgress = document.getElementById('progress');
+      const qLiveScore = document.getElementById('liveScore');
+      const slider = document.getElementById('guessSlider');
+      const guessLabel = document.getElementById('guessLabel');
+      const scaleHint = document.getElementById('scaleHint');
+      const feedback = document.getElementById('feedback');
+      const actionBtn = document.getElementById('actionBtn');
+      const resultWrap = document.getElementById('result');
+      const quizBox = document.getElementById('quiz');
+      const resultIntro = document.getElementById('resultIntro');
+      const categorySummary = document.getElementById('categorySummary');
+      const biasText = document.getElementById('biasText');
+      const details = document.getElementById('details');
+      const restartBtn = document.getElementById('restartBtn');
+
+      renderQuestion();
+
+      actionBtn.addEventListener('click', () => {
+        if (state.waitingNext) {
+          goNext();
+          return;
+        }
+        submitCurrent();
+      });
+
+      restartBtn.addEventListener('click', resetQuiz);
+
+      function renderQuestion() {
+        const current = state.items[state.index];
+        qProgress.textContent = `第 ${state.index + 1} / ${state.items.length} 题`;
+        qCat.textContent = current.category;
+        qText.textContent = current.prompt;
+        qHint.textContent = current.rangeHint || '';
+        qUnit.textContent = `单位：${current.unit}`;
+        if (!Number.isFinite(current.scaleMin) || !Number.isFinite(current.scaleMax) || current.scaleMin <= 0 || current.scaleMax <= 0) {
+          current.scaleMin = current.correct / 3;
+          current.scaleMax = current.correct * 3;
+        }
+        const min = Math.log10(current.scaleMin);
+        const max = Math.log10(current.scaleMax);
+        slider.min = min.toString();
+        slider.max = max.toString();
+        slider.step = (((max - min) / 600) || 0.01).toFixed(4);
+        const middle = (min + max) / 2;
+        slider.value = middle.toString();
+        onSliderChange();
+        feedback.innerHTML = '';
+        actionBtn.textContent = '提交';
+        state.waitingNext = false;
+      }
+
+      slider.addEventListener('input', onSliderChange);
+
+      function onSliderChange() {
+        const guess = exp10(Number(slider.value));
+        const current = state.items[state.index];
+        const scaleMin = current.scaleMin || current.correct / 3;
+        const scaleMax = current.scaleMax || current.correct * 3;
+        const minExp = Math.log10(scaleMin);
+        const maxExp = Math.log10(scaleMax);
+        const ratio = (Number(slider.value) - minExp) / (maxExp - minExp);
+        scaleHint.textContent = `范围：${formatNumber(scaleMin)} ~ ${formatNumber(scaleMax)}，位置：${Math.round(ratio * 100)}%`;
+        guessLabel.textContent = `你选择：${formatNumber(guess)} ${current.unit}`;
+      }
+
+      function submitCurrent() {
+        const current = state.items[state.index];
+        const guess = exp10(Number(slider.value));
+
+        const score = scoreEstimate(guess, current);
+        const direction = guess > current.correct ? '高估' : guess < current.correct ? '低估' : '正好';
+        const closeness = score >= 90 ? '非常准' : score >= 75 ? '接近' : score >= 55 ? '有点偏' : '偏差明显';
+
+        const colorClass = score >= 80 ? 'good' : score >= 60 ? 'warn' : 'bad';
+
+        state.totalScore += score;
+        state.totalCount += 1;
+
+        if (!state.categoryStats[current.category]) {
+          state.categoryStats[current.category] = { sum: 0, count: 0, over: 0, under: 0 };
+        }
+        state.categoryStats[current.category].sum += score;
+        state.categoryStats[current.category].count += 1;
+        if (guess > current.correct) {
+          state.categoryStats[current.category].over += 1;
+        } else if (guess < current.correct) {
+          state.categoryStats[current.category].under += 1;
+        }
+
+        state.answers.push({
+          q: current,
+          guess,
+          score,
+          direction,
+          closeness
+        });
+
+        const factor = current.correct > 0 ? guess / current.correct : 0;
+        const expected = `参考值：${formatNumber(current.correct)} ${current.unit}`;
+
+        feedback.innerHTML = `
+          <span class="scoreText ${colorClass}">${direction}，本题得分 ${score} 分，${closeness}</span><br />
+          <span class="correct muted">你选了 ${formatNumber(guess)} ${current.unit}，${expected}，约数倍差：${factor.toFixed(2)}x</span>
+        `;
+
+        qLiveScore.textContent = `当前得分：${Math.round((state.totalScore / state.totalCount) * 100) / 100}`;
+
+        actionBtn.textContent = state.index < state.items.length - 1 ? '下一题' : '看结果';
+        state.waitingNext = true;
+      }
+
+      function goNext() {
+        state.index += 1;
+        if (state.index >= state.items.length) {
+          showResult();
+          return;
+        }
+        renderQuestion();
+      }
+
+      function showResult() {
+        quizBox.style.display = 'none';
+        resultWrap.classList.add('show');
+
+        const avg = Math.round((state.totalScore / state.totalCount) * 10) / 10;
+        const over = state.answers.filter((item) => item.direction === '高估').length;
+        const under = state.answers.filter((item) => item.direction === '低估').length;
+        const same = state.answers.length - over - under;
+
+        resultIntro.textContent = `总分 ${avg.toFixed(1)} / 100。你一共答对量级感受最好的 ${state.answers.filter(a => a.score >= 80).length} 题，明显偏差 ${state.answers.filter(a => a.score < 50).length} 题。`;
+        biasText.textContent = `整体判断：你更倾向于${over > under ? '高估' : over < under ? '低估' : '相对均衡'}。`;
+
+        categorySummary.innerHTML = '';
+        const entries = Object.entries(state.categoryStats).sort(
+          (a, b) => b[1].sum / b[1].count - a[1].sum / a[1].count
+        );
+        for (const [cat, v] of entries) {
+          const avgCat = Math.round((v.sum / v.count) * 10) / 10;
+          const barColor = avgCat >= 80 ? '#22c55e' : avgCat >= 60 ? '#f59e0b' : '#ef4444';
+          categorySummary.insertAdjacentHTML('beforeend', `
+            <div class="category">
+              <div class="category-top">
+                <strong>${cat}</strong>
+                <span class="muted">${avgCat.toFixed(1)} 分</span>
+              </div>
+              <div class="barRow"><div class="bar" style="width:${avgCat}%;background:${barColor}"></div></div>
+              <p class="small">高估 ${v.over} 题 · 低估 ${v.under} 题 · 共 ${v.count} 题</p>
+            </div>
+          `);
+        }
+
+        details.innerHTML = state.answers
+          .map((item, idx) => {
+            const colorClass = item.score >= 80 ? 'good' : item.score >= 60 ? 'warn' : 'bad';
+            return `
+              <div class="category">
+                <div class="category-top">
+                  <span>Q${idx + 1}（${item.q.category}）</span>
+                  <span class="${colorClass}">${item.score} 分</span>
+                </div>
+                <p class="small muted">${item.q.prompt}</p>
+                <p class="small">你的答案：${formatNumber(item.guess)}，参考：${formatNumber(item.q.correct)} · ${item.direction} ${item.closeness}</p>
+              </div>
+            `;
+          }).join('');
+      }
+
+      function resetQuiz() {
+        state.index = 0;
+        state.items = shuffle([...questions]);
+        state.answers = [];
+        state.totalScore = 0;
+        state.totalCount = 0;
+        state.waitingNext = false;
+        state.categoryStats = {};
+
+        quizBox.style.display = 'block';
+        resultWrap.classList.remove('show');
+        qLiveScore.textContent = '当前得分：0';
+        renderQuestion();
+      }
+
+      function scoreEstimate(guess, q) {
+        if (!Number.isFinite(guess) || !Number.isFinite(q.correct) || guess <= 0 || q.correct <= 0) return 0;
+
+        const targetMin = clampPositive(q.targetMin, q.correct * 0.45, q.correct * 2.5);
+        const targetMax = clampPositive(q.targetMax, q.correct * 0.55, q.correct * 3.5);
+        const tMinLog = Math.log10(Math.min(targetMin, targetMax));
+        const tMaxLog = Math.log10(Math.max(targetMin, targetMax));
+        const guessLog = Math.log10(guess);
+        const targetCenterLog = (tMinLog + tMaxLog) / 2;
+        const targetSpan = Math.max(tMaxLog - tMinLog, 1e-9);
+        const correctLog = Math.log10(q.correct);
+        const diff = Math.abs(guessLog - correctLog);
+        const centerPenalty = Math.abs(guessLog - targetCenterLog) / targetSpan * 10;
+        const slope = q.scoreSlope || 360;
+        if (diff < 1e-12) return 100;
+        const raw = 100 - diff * slope - centerPenalty;
+        return Math.max(0, Math.min(100, Math.round(raw)));
+      }
+
+      function clampLog(x, min, max) {
+        if (!Number.isFinite(x) || !Number.isFinite(min) || !Number.isFinite(max)) return min;
+        const log = Math.log10(x);
+        return Math.min(max, Math.max(min, log));
+      }
+
+      function clampPositive(v, min, max) {
+        if (!Number.isFinite(v) || v <= 0) return NaN;
+        return Math.min(Math.max(v, min), max);
+      }
+
+      function exp10(value) {
+        return Number(Math.pow(10, value).toPrecision(15));
+      }
+
+      function formatNumber(x) {
+        if (!Number.isFinite(x)) return String(x);
+        if (Math.abs(x) >= 1e6 || (Math.abs(x) > 0 && Math.abs(x) < 1e-3)) {
+          return Number.parseFloat(x.toPrecision(4)).toExponential();
+        }
+        return removeTrailingZero(Number(x.toFixed(4)));
+      }
+
+      function removeTrailingZero(s) {
+        return String(s).replace(/(?:\.\d*?)0+$/, '').replace(/\.$/, '');
+      }
+
+      function shuffle(array) {
+        const a = [...array];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+    </script>
+  </body>
+</html>
