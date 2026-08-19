@@ -950,6 +950,8 @@
       const details = document.getElementById('details');
       const restartBtn = document.getElementById('restartBtn');
 
+      let isSyncingInputs = false;
+
       try {
         renderQuestion();
       } catch (err) {
@@ -996,8 +998,6 @@
         actionBtn.textContent = '提交';
         state.waitingNext = false;
       }
-
-      let isSyncingInputs = false;
 
       slider.addEventListener('input', onSliderChange);
       guessInput.addEventListener('input', onManualInputChange);
