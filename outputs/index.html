@@ -950,7 +950,15 @@
       const details = document.getElementById('details');
       const restartBtn = document.getElementById('restartBtn');
 
-      renderQuestion();
+      try {
+        renderQuestion();
+      } catch (err) {
+        console.error('[quiz] 初始化失败：', err);
+        qText.textContent = '题目初始化失败，暂时无法显示题目';
+        qHint.textContent = `错误信息：${err?.message || err}`;
+        feedback.textContent = '请尝试强制刷新（Win/Linux: Ctrl+Shift+R，Mac: Cmd+Shift+R），若站点已更新仍有问题请告诉我控制台错误。';
+        actionBtn.disabled = true;
+      }
 
       actionBtn.addEventListener('click', () => {
         if (state.waitingNext) {
@@ -964,6 +972,9 @@
 
       function renderQuestion() {
         const current = state.items[state.index];
+        if (!current) {
+          throw new Error('题库为空或索引越界，无法加载题目');
+        }
         qProgress.textContent = `第 ${state.index + 1} / ${state.items.length} 题`;
         qCat.textContent = current.category;
         qText.textContent = current.prompt;
