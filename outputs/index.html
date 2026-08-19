@@ -190,6 +190,35 @@
       .result-sub {
         margin-top: 8px;
       }
+      .global-stats {
+        margin-top: 16px;
+        border-top: 1px dashed var(--border);
+        padding-top: 12px;
+        display: grid;
+        gap: 8px;
+      }
+      .bucketGrid {
+        display: grid;
+        gap: 6px;
+      }
+      .bucketRow {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 13px;
+      }
+      .bucketTrack {
+        width: 100%;
+        height: 8px;
+        background: #0b1221;
+        border-radius: 99px;
+        overflow: hidden;
+      }
+      .bucketFill {
+        height: 8px;
+        background: linear-gradient(120deg, #0ea5e9, #6366f1);
+        border-radius: 99px;
+      }
       .correct {
         font-size: 14px;
       }
@@ -326,6 +355,14 @@
 
         <p class="result-sub muted">每题明细</p>
         <div id="details" class="summary"></div>
+
+        <div id="globalStats" class="global-stats">
+          <p class="result-sub muted">全站分布</p>
+          <p id="globalSummary" class="small muted">加载中...</p>
+          <div id="globalPercentile" class="small muted"></div>
+          <div id="globalBuckets" class="bucketGrid"></div>
+          <div id="globalCategories" class="summary"></div>
+        </div>
 
         <button id="restartBtn">再玩一次</button>
       </section>
@@ -986,7 +1023,11 @@
         totalScore: 0,
         totalCount: 0,
         waitingNext: false,
-        categoryStats: {}
+        categoryStats: {},
+        sessionId: '',
+        startedAt: Date.now(),
+        resultPosted: false,
+        posting: false
       };
 
       const qText = document.getElementById('questionText');
@@ -1006,6 +1047,22 @@
       const biasText = document.getElementById('biasText');
       const details = document.getElementById('details');
       const restartBtn = document.getElementById('restartBtn');
+      const globalSummary = document.getElementById('globalSummary');
+      const globalPercentile = document.getElementById('globalPercentile');
+      const globalBuckets = document.getElementById('globalBuckets');
+      const globalCategories = document.getElementById('globalCategories');
+
+      const sessionId = (() => {
+        const key = 'quiz_session_id';
+        let id = window.localStorage.getItem(key);
+        if (!id) {
+          id =
+            `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.floor(Math.random() * 1e6).toString(16)}`;
+          window.localStorage.setItem(key, id);
+        }
+        return id;
+      })();
+      state.sessionId = sessionId;
 
       let isSyncingInputs = false;
 
@@ -1183,6 +1240,9 @@
               </div>
             `;
           }).join('');
+
+        renderGlobalStatsPlaceholder();
+        postResultAndRefreshStats(avg);
       }
 
       function resetQuiz() {
@@ -1193,11 +1253,135 @@
         state.totalCount = 0;
         state.waitingNext = false;
         state.categoryStats = {};
+        state.startedAt = Date.now();
+        state.resultPosted = false;
 
         quizBox.style.display = 'block';
         resultWrap.classList.remove('show');
         qLiveScore.textContent = '当前得分：0';
         renderQuestion();
+      }
+
+      async function postResultAndRefreshStats(userScore) {
+        if (state.resultPosted || state.posting) return;
+        state.posting = true;
+        try {
+          await postQuizResult(userScore);
+          const stats = await fetchGlobalStats(userScore);
+          renderGlobalStats(stats);
+        } catch (err) {
+          console.error('[quiz] global stats failed:', err);
+          globalSummary.textContent = '全站分布暂不可用';
+          globalPercentile.textContent = '';
+        } finally {
+          state.posting = false;
+        }
+      }
+
+      async function postQuizResult(userScore) {
+        const payload = {
+          sessionId: state.sessionId,
+          attemptToken: `${state.sessionId}:${state.startedAt}:${Date.now()}`,
+          totalScore: userScore,
+          questionCount: state.answers.length,
+          overCount: state.answers.filter((item) => item.direction === '高估').length,
+          underCount: state.answers.filter((item) => item.direction === '低估').length,
+          exactCount: state.answers.filter((item) => item.direction === '正好').length,
+          durationMs: Math.max(1, Date.now() - state.startedAt),
+          answers: state.answers.map((item, idx) => ({
+            questionIndex: idx,
+            category: item.q.category,
+            score: item.score,
+            direction: directionToCode(item.direction),
+            prompt: item.q.prompt
+          }))
+        };
+
+        const res = await fetch('/api/quiz/complete', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          throw new Error(`submit failed ${res.status}`);
+        }
+        const result = await res.json().catch(() => ({}));
+        state.resultPosted = true;
+        return result;
+      }
+
+      async function fetchGlobalStats(userScore) {
+        const query = Number.isFinite(userScore) ? `?score=${encodeURIComponent(userScore.toFixed(1))}` : '';
+        const res = await fetch(`/api/quiz/stats${query}`, { method: 'GET', headers: { accept: 'application/json' } });
+        if (!res.ok) {
+          throw new Error(`stats failed ${res.status}`);
+        }
+        return res.json();
+      }
+
+      function renderGlobalStatsPlaceholder() {
+        globalSummary.textContent = '加载全站分布...';
+        globalPercentile.textContent = '';
+        globalBuckets.innerHTML = '';
+        globalCategories.innerHTML = '';
+      }
+
+      function renderGlobalStats(data) {
+        if (!data || !data.ok) {
+          throw new Error('invalid stats response');
+        }
+
+        const total = Number(data.totalAttempts) || 0;
+        const avg = Number.isFinite(data.averageScore) ? data.averageScore.toFixed(1) : '0.0';
+        const avgDuration = Number.isFinite(data.averageDurationMs) ? Math.round(data.averageDurationMs / 1000) : 0;
+        globalSummary.textContent = `已参与 ${total} 人，平均得分 ${avg} 分，平均用时 ${avgDuration} 秒`;
+
+        const percentile = Number.isFinite(data.percentile) ? data.percentile : null;
+        if (total > 0 && percentile !== null) {
+          globalPercentile.textContent = `你处在前 ${percentile.toFixed(1)}%（得分约第 ${data.atOrBelow} 人及以上）`;
+        } else {
+          globalPercentile.textContent = '';
+        }
+
+        const buckets = Array.isArray(data.scoreDistribution) ? data.scoreDistribution : [];
+        const maxBucketCount = Math.max(...buckets.map((b) => Number(b.count) || 0), 1);
+        globalBuckets.innerHTML = buckets
+          .map((b) => {
+            const count = Number(b.count) || 0;
+            const start = Number(b.bucketStart);
+            const end = Number(b.bucketEnd);
+            const width = Math.round((count / maxBucketCount) * 100);
+            return `
+              <div class="bucketRow">
+                <span>${start}–${end}</span>
+                <span>${count}</span>
+              </div>
+              <div class="bucketTrack"><div class="bucketFill" style="width:${width}%"></div></div>
+            `;
+          }).join('');
+
+        const entries = Array.isArray(data.categoryStats) ? data.categoryStats : [];
+        globalCategories.innerHTML = entries
+          .map((entry) => {
+            const avgCat = Number(entry.avgScore) || 0;
+            const barColor = avgCat >= 80 ? '#22c55e' : avgCat >= 60 ? '#f59e0b' : '#ef4444';
+            return `
+              <div class="category">
+                <div class="category-top">
+                  <strong>${entry.category}</strong>
+                  <span class="muted">${Math.round(avgCat * 10) / 10} 分</span>
+                </div>
+                <div class="barRow"><div class="bar" style="width:${Math.max(2, avgCat)}%;background:${barColor}"></div></div>
+                <p class="small">高估 ${entry.overCount || 0} · 低估 ${entry.underCount || 0}</p>
+              </div>
+            `;
+          }).join('');
+      }
+
+      function directionToCode(direction) {
+        if (direction === '高估') return 'over';
+        if (direction === '低估') return 'under';
+        return 'exact';
       }
 
       function scoreEstimate(guess, q) {
