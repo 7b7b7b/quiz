@@ -81,11 +81,6 @@
         font-size: 1.35rem;
         line-height: 1.45;
       }
-      .hint {
-        margin-top: 10px;
-        color: var(--muted);
-        font-size: 13px;
-      }
       .inputRow {
         margin-top: 16px;
         display: flex;
@@ -195,11 +190,6 @@
       .result-sub {
         margin-top: 8px;
       }
-      footer {
-        margin-top: 16px;
-        color: var(--muted);
-        font-size: 12px;
-      }
       .correct {
         font-size: 14px;
       }
@@ -226,8 +216,6 @@
         <h1>生活数字直觉测验（MVP）</h1>
         <span class="pill">不算题，猜个量级</span>
       </div>
-      <p class="muted">规则：只要猜接近数量级就行。支持凭感觉，不必精确；按量级打分。</p>
-
       <section id="quiz" class="qbox">
         <div class="meta">
           <span id="progress">第 1 / 10 题</span>
@@ -236,17 +224,14 @@
         </div>
 
         <h2 id="questionText">题目加载中…</h2>
-        <p id="hint" class="hint"></p>
-
         <div class="inputRow">
           <span id="unit" class="unit"></span>
-          <input id="guessInput" class="guessInput" type="text" inputmode="decimal" placeholder="手动输入（支持 3e8 / 3*10^8）" />
+          <input id="guessInput" class="guessInput" type="text" inputmode="decimal" placeholder="手动输入" />
         </div>
 
         <div class="sliderWrap">
           <div class="guessVal">
             <span id="guessLabel"></span>
-            <span id="scaleHint" class="muted"></span>
           </div>
           <input id="guessSlider" type="range" />
         </div>
@@ -262,15 +247,12 @@
         <div class="summary" id="categorySummary"></div>
         <p id="biasText" class="result-sub"></p>
 
-        <p class="result-sub muted">你的每题明细（可用于回看）：</p>
+        <p class="result-sub muted">每题明细</p>
         <div id="details" class="summary"></div>
 
         <button id="restartBtn">再玩一次</button>
       </section>
 
-      <footer>
-        提示：问题可因地域和时间略有差异，这版是 MVP 版本，目标是玩法通顺和可上线。
-      </footer>
     </main>
 
     <script>
@@ -931,7 +913,6 @@
       };
 
       const qText = document.getElementById('questionText');
-      const qHint = document.getElementById('hint');
       const qUnit = document.getElementById('unit');
       const qCat = document.getElementById('category');
       const qProgress = document.getElementById('progress');
@@ -939,7 +920,6 @@
       const slider = document.getElementById('guessSlider');
       const guessInput = document.getElementById('guessInput');
       const guessLabel = document.getElementById('guessLabel');
-      const scaleHint = document.getElementById('scaleHint');
       const feedback = document.getElementById('feedback');
       const actionBtn = document.getElementById('actionBtn');
       const resultWrap = document.getElementById('result');
@@ -956,9 +936,8 @@
         renderQuestion();
       } catch (err) {
         console.error('[quiz] 初始化失败：', err);
-        qText.textContent = '题目初始化失败，暂时无法显示题目';
-        qHint.textContent = `错误信息：${err?.message || err}`;
-        feedback.textContent = '请尝试强制刷新（Win/Linux: Ctrl+Shift+R，Mac: Cmd+Shift+R），若站点已更新仍有问题请告诉我控制台错误。';
+        qText.textContent = '题目初始化失败';
+        feedback.textContent = '请稍后重试';
         actionBtn.disabled = true;
       }
 
@@ -980,7 +959,6 @@
         qProgress.textContent = `第 ${state.index + 1} / ${state.items.length} 题`;
         qCat.textContent = current.category;
         qText.textContent = current.prompt;
-        qHint.textContent = current.rangeHint || '';
         qUnit.textContent = `单位：${current.unit}`;
         if (!Number.isFinite(current.scaleMin) || !Number.isFinite(current.scaleMax) || current.scaleMin <= 0 || current.scaleMax <= 0) {
           current.scaleMin = current.correct / 3;
@@ -1020,12 +998,6 @@
       function onSliderChange() {
         const guess = exp10(Number(slider.value));
         const current = state.items[state.index];
-        const scaleMin = current.scaleMin || current.correct / 3;
-        const scaleMax = current.scaleMax || current.correct * 3;
-        const minExp = Math.log10(scaleMin);
-        const maxExp = Math.log10(scaleMax);
-        const ratio = (Number(slider.value) - minExp) / (maxExp - minExp);
-        scaleHint.textContent = `范围：${formatNumber(scaleMin)} ~ ${formatNumber(scaleMax)}，位置：${Math.round(ratio * 100)}%`;
         guessLabel.textContent = `你选择：${formatNumber(guess)} ${current.unit}`;
         if (!isSyncingInputs) {
           isSyncingInputs = true;
