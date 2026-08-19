@@ -1203,7 +1203,7 @@
           .replace(/x/g, '*');
         if (!normalized) return NaN;
 
-        const match = normalized.match(/^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(?:\*(?:10\^([+-]?\d+)|10e([+-]?\d+)|e([+-]?\d+))$/i);
+        const match = normalized.match(/^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(?:\*(?:10\^([+-]?\d+)|10e([+-]?\d+)|e([+-]?\d+)))$/i);
         if (match) {
           const base = match[1];
           const exp = match[2] || match[3] || match[4];
