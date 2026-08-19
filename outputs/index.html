@@ -93,6 +93,23 @@
         align-items: center;
         flex-wrap: wrap;
       }
+      .guessInput {
+        flex: 1;
+        min-width: 180px;
+        height: 44px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #020617;
+        color: var(--text);
+        padding: 0 12px;
+        outline: none;
+        font: inherit;
+        font-size: 14px;
+      }
+      .guessInput:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+      }
       .sliderWrap {
         margin-top: 14px;
         display: grid;
@@ -223,14 +240,15 @@
 
         <div class="inputRow">
           <span id="unit" class="unit"></span>
+          <input id="guessInput" class="guessInput" type="text" inputmode="decimal" placeholder="手动输入（支持 3e8 / 3*10^8）" />
         </div>
 
         <div class="sliderWrap">
-          <input id="guessSlider" type="range" />
           <div class="guessVal">
             <span id="guessLabel"></span>
             <span id="scaleHint" class="muted"></span>
           </div>
+          <input id="guessSlider" type="range" />
         </div>
 
         <button id="actionBtn">提交</button>
@@ -919,6 +937,7 @@
       const qProgress = document.getElementById('progress');
       const qLiveScore = document.getElementById('liveScore');
       const slider = document.getElementById('guessSlider');
+      const guessInput = document.getElementById('guessInput');
       const guessLabel = document.getElementById('guessLabel');
       const scaleHint = document.getElementById('scaleHint');
       const feedback = document.getElementById('feedback');
@@ -967,7 +986,25 @@
         state.waitingNext = false;
       }
 
+      let isSyncingInputs = false;
+
       slider.addEventListener('input', onSliderChange);
+      guessInput.addEventListener('input', onManualInputChange);
+
+      function onManualInputChange() {
+        if (isSyncingInputs) return;
+        const current = state.items[state.index];
+        const value = parseInputNumber(guessInput.value);
+        if (!Number.isFinite(value) || value <= 0) return;
+
+        const scaleMin = current.scaleMin || current.correct / 3;
+        const scaleMax = current.scaleMax || current.correct * 3;
+        const clamped = Math.min(Math.max(value, scaleMin), scaleMax);
+        isSyncingInputs = true;
+        slider.value = Math.log10(clamped).toString();
+        onSliderChange();
+        isSyncingInputs = false;
+      }
 
       function onSliderChange() {
         const guess = exp10(Number(slider.value));
@@ -979,6 +1016,11 @@
         const ratio = (Number(slider.value) - minExp) / (maxExp - minExp);
         scaleHint.textContent = `范围：${formatNumber(scaleMin)} ~ ${formatNumber(scaleMax)}，位置：${Math.round(ratio * 100)}%`;
         guessLabel.textContent = `你选择：${formatNumber(guess)} ${current.unit}`;
+        if (!isSyncingInputs) {
+          isSyncingInputs = true;
+          guessInput.value = formatManualInput(guess);
+          isSyncingInputs = false;
+        }
       }
 
       function submitCurrent() {
@@ -1138,6 +1180,34 @@
           return Number.parseFloat(x.toPrecision(4)).toExponential();
         }
         return removeTrailingZero(Number(x.toFixed(4)));
+      }
+
+      function parseInputNumber(raw) {
+        if (!raw) return NaN;
+        const normalized = String(raw)
+          .trim()
+          .replace(/,/g, '')
+          .replace(/\s+/g, '')
+          .replace(/×/g, '*')
+          .replace(/x/g, '*');
+        if (!normalized) return NaN;
+
+        const match = normalized.match(/^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(?:\*(?:10\^([+-]?\d+)|10e([+-]?\d+)|e([+-]?\d+))$/i);
+        if (match) {
+          const base = match[1];
+          const exp = match[2] || match[3] || match[4];
+          return Number(`${base}e${exp}`);
+        }
+
+        return Number(normalized);
+      }
+
+      function formatManualInput(x) {
+        if (!Number.isFinite(x)) return '';
+        if (x >= 1e6 || (x > 0 && x < 1e-3)) {
+          return Number.parseFloat(x.toPrecision(8)).toExponential(4);
+        }
+        return removeTrailingZero(Number(x.toPrecision(12)));
       }
 
       function removeTrailingZero(s) {
